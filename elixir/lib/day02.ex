@@ -6,9 +6,9 @@ defmodule Day02 do
   end
 
   def parse_line(line) do
-    [_, id_text, draw_text] = Regex.run(~r/^Game (\d+)\: (.*)$/, line)
+    [_, id_text, draws_text] = Regex.run(~r/^Game (\d+)\: (.*)$/, line)
     draws =
-      for draw_text <- String.split(draw_text, "; ") do
+      for draw_text <- String.split(draws_text, "; ") do
         for cube_text <- String.split(draw_text, ", "),
             [n_text, color_text] = String.split(cube_text, " "),
             into: %{} do
