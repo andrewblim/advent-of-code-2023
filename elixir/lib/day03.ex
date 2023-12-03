@@ -27,26 +27,26 @@ defmodule Day03 do
           line_length = String.length(line),
           {ch, col} <- Enum.with_index(String.graphemes(line)),
           reduce: {%{}, ""} do
-            {map, current_number} ->
-              cond do
-                is_blank?(ch) && current_number != "" ->
-                  {Map.put(map, {row, col - 1}, String.to_integer(current_number)), ""}
-                is_blank?(ch) ->
-                  {map, current_number}
-                is_symbol?(ch) && current_number != "" ->
-                  {
-                    map
-                    |> Map.put({row, col - 1}, String.to_integer(current_number))
-                    |> Map.put({row, col}, ch),
-                    ""
-                  }
-                is_symbol?(ch) ->
-                  {Map.put(map, {row, col}, ch), ""}
-                col == line_length - 1 ->
-                  {Map.put(map, {row, col}, String.to_integer(current_number <> ch)), ""}
-                true ->
-                  {map, current_number <> ch}
-              end
+        {map, current_number} ->
+          cond do
+            is_blank?(ch) && current_number != "" ->
+              {Map.put(map, {row, col - 1}, String.to_integer(current_number)), ""}
+            is_blank?(ch) ->
+              {map, current_number}
+            is_symbol?(ch) && current_number != "" ->
+              {
+                map
+                |> Map.put({row, col - 1}, String.to_integer(current_number))
+                |> Map.put({row, col}, ch),
+                ""
+              }
+            is_symbol?(ch) ->
+              {Map.put(map, {row, col}, ch), ""}
+            col == line_length - 1 ->
+              {Map.put(map, {row, col}, String.to_integer(current_number <> ch)), ""}
+            true ->
+              {map, current_number <> ch}
+          end
     end
     map
   end
