@@ -51,11 +51,12 @@ defmodule Day03 do
     map
   end
 
-  def part_numbers(map) do
+  def score_part_numbers(map) do
     for {{row, col}, v} <- map,
         is_integer(v),
-        part_number?(map, {row, col}) do
-      v
+        part_number?(map, {row, col}),
+        reduce: 0 do
+      acc -> acc + v
     end
   end
 
@@ -75,8 +76,7 @@ defmodule Day03 do
         is_integer(v),
         gear <- adjacent_gears(map, {row, col}),
         reduce: %{} do
-      acc ->
-        Map.update(acc, gear, [v], fn x -> [v | x] end)
+      acc -> Map.update(acc, gear, [v], fn x -> [v | x] end)
     end
   end
 
@@ -101,8 +101,7 @@ defmodule Day03 do
   def problem1(input \\ "data/day03.txt", type \\ :file) do
     Day03.read_input(input, type)
     |> generate_map
-    |> part_numbers()
-    |> Enum.sum()
+    |> score_part_numbers()
   end
 
   def problem2(input \\ "data/day03.txt", type \\ :file) do
