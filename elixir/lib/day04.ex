@@ -12,42 +12,42 @@ defmodule Day04 do
     {String.to_integer(id_text), winners, draw}
   end
 
-  def score_card(winners, draw) do
-    n_winners = MapSet.intersection(MapSet.new(winners), MapSet.new(draw)) |> MapSet.size()
-    if n_winners == 0, do: 0, else: Integer.pow(2, n_winners - 1)
+  def count_winners(winners, draw) do
+    MapSet.intersection(MapSet.new(winners), MapSet.new(draw)) |> MapSet.size()
   end
 
-  def update_card_count(card_map) do
+  def card_count(card_map) do
+    init_count = for id <- Map.keys(card_map), into: %{}, do: {id, 1}
     for id <- Enum.sort(Map.keys(card_map)),
-        {_, winners, draw} = Map.get(card_map, id),
-        n_winners = MapSet.intersection(MapSet.new(winners), MapSet.new(draw)) |> MapSet.size(),
+        {winners, draw} = Map.get(card_map, id),
+        n_winners = count_winners(winners, draw),
         n_winners > 0,
         i <- (id + 1)..(id + n_winners),
         i <= Enum.max(Map.keys(card_map)),
-        reduce: card_map do
+        reduce: init_count do
       acc ->
-        {n_to_add, _, _} = Map.get(acc, id)
-        Map.update!(acc, i, fn {n, winners, draw} -> {n + n_to_add, winners, draw} end)
+        n_cards = Map.get(acc, id)
+        Map.update!(acc, i, fn n -> n + n_cards end)
     end
   end
 
   def problem1(input \\ "data/day04.txt", type \\ :file) do
     for line <- Day04.read_input(input, type),
         {_, winners, draw} = parse_line(line),
-        score = score_card(winners, draw),
+        n_winners = count_winners(winners, draw),
         reduce: 0 do
-      acc -> acc + score
+      acc -> acc + if n_winners == 0, do: 0, else: Integer.pow(2, n_winners - 1)
     end
   end
 
   def problem2(input \\ "data/day04.txt", type \\ :file) do
-    initial_card_map =
+    card_map =
       for line <- Day04.read_input(input, type),
           {id, winners, draw} = parse_line(line),
           into: %{} do
-        {id, {1, winners, draw}}
+        {id, {winners, draw}}
       end
-    for {n, _, _} <- Map.values(update_card_count(initial_card_map)), reduce: 0 do
+    for n <- Map.values(card_count(card_map)), reduce: 0 do
       acc -> acc + n
     end
   end
