@@ -9,4 +9,12 @@ defmodule Day06Test do
     """
     assert Day06.problem1(input, :io) == 288
   end
+
+  test "problem2" do
+    input = """
+    Time:      7  15   30
+    Distance:  9  40  200
+    """
+    assert Day06.problem2(input, :io) == 71503
+  end
 end
