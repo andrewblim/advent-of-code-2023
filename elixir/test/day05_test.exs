@@ -85,6 +85,6 @@ defmodule Day05Test do
     60 56 37
     56 93 4
     """
-    # assert Day05.problem2(input, :io) == 46
+    assert Day05.problem2(input, :io) == 46
   end
 end
