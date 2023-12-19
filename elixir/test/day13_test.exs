@@ -22,4 +22,25 @@ defmodule Day13Test do
     """
     assert Day13.problem1(input, :io) == 405
   end
+
+  test "problem2" do
+    input = """
+    #.##..##.
+    ..#.##.#.
+    ##......#
+    ##......#
+    ..#.##.#.
+    ..##..##.
+    #.#.##.#.
+
+    #...##..#
+    #....#..#
+    ..##..###
+    #####.##.
+    #####.##.
+    ..##..###
+    #....#..#
+    """
+    assert Day13.problem2(input, :io) == 400
+  end
 end
