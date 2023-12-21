@@ -81,10 +81,32 @@ defmodule Day16 do
     for {r, c, _} <- visited, into: MapSet.new(), do: {r, c}
   end
 
+  def edges(n_rows, n_cols) do
+    lr_edges =
+      for r <- 0..(n_rows - 1), {c, dir} <- [{-1, :right}, {n_cols, :left}] do
+        {r, c, dir}
+      end
+    ud_edges =
+      for c <- 0..(n_cols - 1), {r, dir} <- [{-1, :down}, {n_rows, :up}] do
+        {r, c, dir}
+      end
+    lr_edges ++ ud_edges
+  end
+
   def problem1(input \\ "data/day16.txt", type \\ :file) do
     {n_rows, n_cols, grid} = read_input(input, type)
     advance(MapSet.new([{0, -1, :right}]), grid, n_rows, n_cols)
     |> visited_points()
     |> MapSet.size()
+  end
+
+  def problem2(input \\ "data/day16.txt", type \\ :file) do
+    {n_rows, n_cols, grid} = read_input(input, type)
+    for edge <- edges(n_rows, n_cols) do
+      advance(MapSet.new([edge]), grid, n_rows, n_cols)
+      |> visited_points()
+      |> MapSet.size()
+    end
+    |> Enum.max()
   end
 end
