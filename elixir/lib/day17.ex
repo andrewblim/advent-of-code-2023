@@ -15,11 +15,11 @@ defmodule Day17 do
     {length(lines), String.length(hd(lines)), grid}
   end
 
-  def make_edges(grid, n_rows, n_cols) do
+  def make_edges(grid, n_rows, n_cols, offsets) do
     from_vert_nodes =
       for r <- 0..(n_rows - 1),
           c <- 0..(n_cols - 1),
-          offset <- [-3, -2, -1, 1, 2, 3],
+          offset <- offsets,
           next_r = r + offset,
           next_r >= 0 and next_r < n_rows,
           reduce: %{} do
@@ -33,7 +33,7 @@ defmodule Day17 do
     from_horiz_nodes =
       for r <- 0..(n_rows - 1),
           c <- 0..(n_cols - 1),
-          offset <- [-3, -2, -1, 1, 2, 3],
+          offset <- offsets,
           next_c = c + offset,
           next_c >= 0 and next_c < n_cols,
           reduce: %{} do
@@ -48,7 +48,6 @@ defmodule Day17 do
   end
 
   def dijkstra(node, edges, targets, distances, visited) do
-    if rem(MapSet.size(visited), 100) == 0, do: IO.inspect(MapSet.size(visited))
     next_distances =
       for {neighbor, cost} <- Map.fetch!(edges, node),
           not MapSet.member?(visited, neighbor),
@@ -61,10 +60,11 @@ defmodule Day17 do
     if MapSet.subset?(targets, next_visited) do
       next_distances
     else
-      next_node = distances
-      |> Map.filter(fn {k, _} -> not MapSet.member?(visited, k) end)
-      |> Enum.min_by(fn {_, v} -> v end)  # nil comes after integers in Elixir sorting
-      |> elem(0)
+      # TODO: use a priority queue to make this part less awful
+      {next_node, _} =
+        next_distances
+        |> Map.filter(fn {k, _} -> not MapSet.member?(next_visited, k) end)
+        |> Enum.min_by(fn {_, v} -> v end)  # nil comes after integers in Elixir sorting
       dijkstra(next_node, edges, targets, next_distances, next_visited)
     end
   end
@@ -72,8 +72,9 @@ defmodule Day17 do
   def problem1(input \\ "data/day17.txt", type \\ :file) do
     {n_rows, n_cols, grid} = read_input(input, type)
 
-    edges = make_edges(grid, n_rows, n_cols)
+    edges = make_edges(grid, n_rows, n_cols, [-3, -2, -1, 1, 2, 3])
     distances = for {r, c} <- Map.keys(grid), orient <- [:horiz, :vert], into: %{}, do: {{r, c, orient}, nil}
+
     # add fake initial node that points to both upper-left states at 0 cost
     init_node = {nil, nil, nil}
     edges = Map.put(edges, init_node, [{{0, 0, :horiz}, 0}, {{0, 0, :vert}, 0}])
@@ -87,6 +88,20 @@ defmodule Day17 do
   end
 
   def problem2(input \\ "data/day17.txt", type \\ :file) do
-    read_input(input, type)
+    {n_rows, n_cols, grid} = read_input(input, type)
+
+    edges = make_edges(grid, n_rows, n_cols, [-10, -9, -8, -7, -6, -5, -4, 4, 5, 6, 7, 8, 9, 10])
+    distances = for {r, c} <- Map.keys(grid), orient <- [:horiz, :vert], into: %{}, do: {{r, c, orient}, nil}
+
+    # add fake initial node that points to both upper-left states at 0 cost
+    init_node = {nil, nil, nil}
+    edges = Map.put(edges, init_node, [{{0, 0, :horiz}, 0}, {{0, 0, :vert}, 0}])
+    distances = Map.put(distances, init_node, 0)
+
+    targets = MapSet.new([{n_rows - 1, n_cols - 1, :horiz}, {n_rows - 1, n_cols - 1, :vert}])
+    dijkstra(init_node, edges, targets, distances, MapSet.new())
+    |> Map.filter(fn {k, _} -> MapSet.member?(targets, k) end)
+    |> Map.values()
+    |> Enum.min()
   end
 end
