@@ -3,12 +3,14 @@ defmodule Day18 do
     lines = Helpers.file_or_io(input, type) |> String.trim() |> String.split("\n")
     for line <- lines,
         [dir, dist, color] = String.split(line) do
-      {dir, String.to_integer(dist), color}
+      [_, hex] = Regex.run(~r/^\(#(\w+)\)$/, color)
+      hex_int = String.to_integer(hex, 16)
+      {dir, String.to_integer(dist), Integer.floor_div(hex_int, 16), rem(hex_int, 16)}
     end
   end
 
   def dig_border(instructions, start) do
-    for {dir, dist, color} <- instructions,
+    for {dir, dist, _, _} <- instructions,
         reduce: {%{start => :start}, start} do
       {grid, {r, c}} ->
         points = case dir do
@@ -17,7 +19,7 @@ defmodule Day18 do
           "L" -> Enum.map(dist..1//-1, fn i -> {r, c - i} end)
           "R" -> Enum.map(dist..1//-1, fn i -> {r, c + i} end)
         end
-        next_grid = for point <- points, into: grid, do: {point, color}
+        next_grid = for point <- points, into: grid, do: {point, :wall}
         {next_grid, hd(points)}
     end
   end
@@ -39,9 +41,9 @@ defmodule Day18 do
           c <- min_col..max_col,
           reduce: {grid, :outside, nil} do
         {grid, location, wall_from} ->
-          is_wall? = Map.has_key?(grid, {r, c}) and Map.get(grid, {r, c}) != :fill
-          is_wall_above? = Map.has_key?(grid, {r - 1, c}) and Map.get(grid, {r - 1, c}) != :fill
-          is_wall_below? = Map.has_key?(grid, {r + 1, c}) and Map.get(grid, {r + 1, c}) != :fill
+          is_wall? = Map.get(grid, {r, c}) == :wall
+          is_wall_above? = Map.get(grid, {r - 1, c}) == :wall
+          is_wall_below? = Map.get(grid, {r + 1, c}) == :wall
           case {is_wall?, location, wall_from, is_wall_above?, is_wall_below?} do
             # Mark blanks per location
             {false, :outside, nil, _, _} ->
