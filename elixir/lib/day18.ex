@@ -9,76 +9,79 @@ defmodule Day18 do
     end
   end
 
-  def dig_border(instructions, start) do
+  def dig_corners(instructions, start) do
     for {dir, dist, _, _} <- instructions,
-        reduce: {%{start => :start}, start} do
+        reduce: {%{start => :wall}, start} do
       {grid, {r, c}} ->
-        points = case dir do
-          "U" -> Enum.map(dist..1//-1, fn i -> {r - i, c} end)
-          "D" -> Enum.map(dist..1//-1, fn i -> {r + i, c} end)
-          "L" -> Enum.map(dist..1//-1, fn i -> {r, c - i} end)
-          "R" -> Enum.map(dist..1//-1, fn i -> {r, c + i} end)
+        point = case dir do
+          "U" -> {r - dist, c}
+          "D" -> {r + dist, c}
+          "L" -> {r, c - dist}
+          "R" -> {r, c + dist}
         end
-        next_grid = for point <- points, into: grid, do: {point, :wall}
-        {next_grid, hd(points)}
+        {Map.put(grid, point, :wall), point}
     end
   end
 
-  def flip_location(location) do
-    case location do
-      :outside -> :inside
-      :inside -> :outside
+  def dig_corners2(instructions, start) do
+    for {_, _, dist, dir} <- instructions,
+        reduce: {%{start => :wall}, start} do
+      {grid, {r, c}} ->
+        point = case dir do
+          3 -> {r - dist, c}
+          1 -> {r + dist, c}
+          2 -> {r, c - dist}
+          0 -> {r, c + dist}
+        end
+        {Map.put(grid, point, :wall), point}
     end
   end
 
-  def paint_interior(grid) do
-    min_row = Map.keys(grid) |> Enum.min_by(fn {r, _} -> r end) |> elem(0)
-    max_row = Map.keys(grid) |> Enum.max_by(fn {r, _} -> r end) |> elem(0)
-    min_col = Map.keys(grid) |> Enum.min_by(fn {_, c} -> c end) |> elem(1)
-    max_col = Map.keys(grid) |> Enum.max_by(fn {_, c} -> c end) |> elem(1)
-    {grid, :outside, nil} =
-      for r <- min_row..max_row,
-          c <- min_col..max_col,
-          reduce: {grid, :outside, nil} do
-        {grid, location, wall_from} ->
-          is_wall? = Map.get(grid, {r, c}) == :wall
-          is_wall_above? = Map.get(grid, {r - 1, c}) == :wall
-          is_wall_below? = Map.get(grid, {r + 1, c}) == :wall
-          case {is_wall?, location, wall_from, is_wall_above?, is_wall_below?} do
-            # Mark blanks per location
-            {false, :outside, nil, _, _} ->
-              {grid, :outside, nil}
-            {false, :inside, nil, _, _} ->
-              {Map.put(grid, {r, c}, :fill), :inside, nil}
+  def count_fill(grid) do
+    row_groups = Map.keys(grid) |> Enum.sort() |> Enum.group_by(fn {r, _} -> r end)
+    start_prev_r = (Map.keys(row_groups) |> Enum.min()) - 1
+    for {r, row_group} <- Enum.sort(row_groups),
+        reduce: {0, start_prev_r, MapSet.new(), []} do
+      {count, prev_r, prev_cols, prev_intervals} ->
+        # Add fill seen since the last row
+        count = count + (r - prev_r - 1) * interval_size(prev_intervals)
 
-            # If we hit a wall that extends above and below, flip location
-            {true, location, nil, true, true} ->
-              {grid, flip_location(location), nil}
+        # Compute new cols/intervals after this row
+        cols = Enum.map(row_group, fn {_, c} -> c end) |> MapSet.new()
+        cols = MapSet.difference(MapSet.union(cols, prev_cols), MapSet.intersection(cols, prev_cols))
+        intervals = cols_to_intervals(cols)
 
-            # If we hit a wall that extends only above or below and we're outside/inside, we're riding the wall
-            {true, location, nil, true, false} ->
-              {grid, location, :above}
-            {true, location, nil, false, true} ->
-              {grid, location, :below}
+        # Add fill from the current row, which is the size of the union of the intervals
+        count = count + interval_size(interval_union(intervals, prev_intervals))
 
-            # If we hit a wall that extends neither above or below and we're riding the wall, keep riding
-            {true, location, :above, false, false} ->
-              {grid, location, :above}
-            {true, location, :below, false, false} ->
-              {grid, location, :below}
+        {count, r, cols, intervals}
+    end
+    |> elem(0)
+  end
 
-            # If we hit a wall that extends only above or below and we're outside/inside, adjust location as needed
-            {true, location, :above, true, false} ->
-              {grid, location, nil}
-            {true, location, :above, false, true} ->
-              {grid, flip_location(location), nil}
-            {true, location, :below, true, false} ->
-              {grid, flip_location(location), nil}
-            {true, location, :below, false, true} ->
-              {grid, location, nil}
-          end
-      end
-    grid
+  def cols_to_intervals(cols) do
+    cols |> Enum.sort() |> Enum.chunk_every(2)
+  end
+
+  def interval_size(intervals) do
+    intervals
+    |> Enum.map(fn [c1, c2] -> c2 - c1 + 1 end)
+    |> Enum.sum()
+  end
+
+  def interval_union(intervals1, intervals2) do
+    for [c1, c2] <- Enum.sort(intervals1 ++ intervals2), reduce: [] do
+      combined ->
+        case combined do
+          [] -> [[c1, c2]]
+          [[_, prev_c2] | _] when prev_c2 < c1 ->
+            [[c1, c2] | combined]
+          [[prev_c1, prev_c2] | rest] when prev_c2 < c2 ->
+            [[prev_c1, c2] | rest]
+          _ ->
+            combined
+        end
+    end
   end
 
   def print(grid, device \\ :stdio) do
@@ -98,11 +101,13 @@ defmodule Day18 do
 
   def problem1(input \\ "data/day18.txt", type \\ :file) do
     instructions = read_input(input, type)
-    {grid, {0, 0}} = dig_border(instructions, {0, 0})
-    paint_interior(grid) |> map_size()
+    {grid, {0, 0}} = dig_corners(instructions, {0, 0})
+    count_fill(grid)
   end
 
   def problem2(input \\ "data/day18.txt", type \\ :file) do
-    read_input(input, type)
+    instructions = read_input(input, type)
+    {grid, {0, 0}} = dig_corners2(instructions, {0, 0})
+    count_fill(grid)
   end
 end

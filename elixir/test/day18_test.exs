@@ -22,7 +22,7 @@ defmodule Day18Test do
     assert Day18.problem1(input, :io) == 62
   end
 
-  test "problem1" do
+  test "problem2" do
     input = """
     R 6 (#70c710)
     D 5 (#0dc571)
